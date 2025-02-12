@@ -8,7 +8,7 @@ export const swaggerDocument = {
   },
   servers: [
     {
-      url: 'https://web-production-04bb4.up.railway.app',
+      url: 'https://web-production-00a2a.up.railway.app',
       description: 'Servidor de producción',
     },
   ],
