@@ -12,8 +12,8 @@ interface PolicyData {
     dni: string;
     celular: string;
     email: string;
-    fechaEmision: string;
-    condicion: string;
+    fechaEmision: string; // Ahora contendrá vigenciaInicio
+    condicion: string; // Ahora contendrá vigenciaFin
   };
   domicilio: {
     direccion: string;

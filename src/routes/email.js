@@ -89,6 +89,15 @@ const validateEmail = [
   (0, express_validator_1.body)('vehicle.modelo')
     .notEmpty()
     .withMessage('Modelo es requerido'),
+  (0, express_validator_1.body)('vehicle.vigenciaInicio')
+    .notEmpty()
+    .withMessage('Fecha de inicio de vigencia es requerida'),
+  (0, express_validator_1.body)('vehicle.vigenciaFin')
+    .notEmpty()
+    .withMessage('Fecha de fin de vigencia es requerida'),
+  (0, express_validator_1.body)('vehicle.medioPago')
+    .notEmpty()
+    .withMessage('Medio de pago válido es requerido'),
 ];
 // Endpoint para enviar email
 router.post('/send-policy-email', validateEmail, (req, res) =>
@@ -110,6 +119,9 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
         localidad,
         provincia,
         vehicle,
+        vigenciaInicio,
+        vigenciaFin,
+        medioPago,
       } = req.body;
       // Generar PDF
       const pdfData = {
@@ -120,8 +132,8 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
           dni: dni,
           celular: telefono,
           email: clientEmail,
-          fechaEmision: new Date().toLocaleDateString(),
-          condicion: 'Cons. Final',
+          fechaEmision: vigenciaInicio,
+          condicion: vigenciaFin,
         },
         domicilio: {
           direccion: direccion,
@@ -135,7 +147,7 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
           color: vehicle.color || '-',
           patente: vehicle.patente,
         },
-        medioPago: 'CBU',
+        medioPago: medioPago,
       };
       const pdfBuffer = yield (0, pdfGenerator_1.generatePolicyPDF)(pdfData);
       // Configurar email con PDF adjunto

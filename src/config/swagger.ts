@@ -105,6 +105,19 @@ export const swaggerDocument = {
                       },
                     },
                   },
+                  vigenciaInicio: {
+                    type: 'string',
+                    description: 'Fecha de inicio de vigencia',
+                  },
+                  vigenciaFin: {
+                    type: 'string',
+                    description: 'Fecha de fin de vigencia',
+                  },
+                  medioPago: {
+                    type: 'string',
+                    description: 'Medio de pago',
+                    enum: ['CBU', 'TARJETA', 'EFECTIVO'],
+                  },
                 },
               },
               example: {
@@ -124,6 +137,9 @@ export const swaggerDocument = {
                   modelo: 'Corolla',
                   color: 'Rojo',
                 },
+                vigenciaInicio: '2025-02-12',
+                vigenciaFin: '2026-02-12',
+                medioPago: 'CBU',
               },
             },
           },
