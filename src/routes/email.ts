@@ -6,7 +6,7 @@ import { generatePolicyPDF } from '../utils/pdfGenerator';
 
 const router = express.Router();
 
-// Validaciones
+// Validaciones corregidas - aseguramos que sean consistentes
 const validateEmail = [
   body('polizaNumber').notEmpty().withMessage('Número de póliza es requerido'),
   body('cuponNumber').notEmpty().withMessage('Número de cupón es requerido'),
@@ -22,6 +22,7 @@ const validateEmail = [
   body('vehicle.patente').notEmpty().withMessage('Patente es requerida'),
   body('vehicle.marca').notEmpty().withMessage('Marca es requerida'),
   body('vehicle.modelo').notEmpty().withMessage('Modelo es requerido'),
+  // Validamos en la raíz para ser consistentes con el procesamiento
   body('vigenciaInicio')
     .notEmpty()
     .withMessage('Fecha de inicio de vigencia es requerida'),
@@ -174,6 +175,9 @@ router.post(
         provincia,
         vehicle,
         provisorio,
+        vigenciaInicio,
+        vigenciaFin,
+        medioPago,
       } = req.body;
 
       const pdfData = {
@@ -185,8 +189,8 @@ router.post(
           dni: dni,
           celular: telefono,
           email: clientEmail,
-          fechaEmision: new Date().toLocaleDateString(),
-          condicion: 'Cons. Final',
+          fechaEmision: vigenciaInicio,
+          condicion: vigenciaFin,
         },
         domicilio: {
           direccion: direccion,
@@ -200,7 +204,7 @@ router.post(
           color: vehicle.color || '-',
           patente: vehicle.patente.toUpperCase(),
         },
-        medioPago: 'CBU',
+        medioPago: medioPago,
       };
 
       const pdfBuffer = await generatePolicyPDF(pdfData);

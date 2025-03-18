@@ -45,7 +45,8 @@ const express_validator_1 = require('express-validator');
 const nodemailer_1 = __importDefault(require('nodemailer'));
 const pdfGenerator_1 = require('../utils/pdfGenerator');
 const router = express_1.default.Router();
-// Validaciones
+
+// Validaciones corregidas - ahora validamos en la raíz del objeto
 const validateEmail = [
   (0, express_validator_1.body)('polizaNumber')
     .notEmpty()
@@ -89,16 +90,42 @@ const validateEmail = [
   (0, express_validator_1.body)('vehicle.modelo')
     .notEmpty()
     .withMessage('Modelo es requerido'),
-  (0, express_validator_1.body)('vehicle.vigenciaInicio')
+  // Cambios clave: validamos estos campos en la raíz
+  (0, express_validator_1.body)('vigenciaInicio')
     .notEmpty()
     .withMessage('Fecha de inicio de vigencia es requerida'),
-  (0, express_validator_1.body)('vehicle.vigenciaFin')
+  (0, express_validator_1.body)('vigenciaFin')
     .notEmpty()
     .withMessage('Fecha de fin de vigencia es requerida'),
-  (0, express_validator_1.body)('vehicle.medioPago')
+  (0, express_validator_1.body)('medioPago')
     .notEmpty()
     .withMessage('Medio de pago válido es requerido'),
 ];
+
+// Template del email
+const getEmailTemplate = (clientName, provisorio) => `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 25px;">
+      <img 
+        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image003-lQUo6M0y8FjldKudsUzMZXPEtTT9Ig.png" 
+        alt="Rescate Logo" 
+        style="width: 200px; max-width: 100%; height: auto;"
+      />
+    </div>
+    <div style="background-color: #ffffff; padding: 20px; border-radius: 5px;">
+      <h1 style="color: #E0251B; text-align: center; font-size: 24px; margin-bottom: 20px;">¡Bienvenido a nuestro servicio de grúas!</h1>
+      <p style="color: #333333; font-size: 16px; line-height: 1.5; margin-bottom: 15px;">Estimado/a ${clientName},</p>
+      <p style="color: #333333; font-size: 16px; line-height: 1.5; margin-bottom: 15px;">Adjunto encontrará su póliza de seguro${
+        provisorio ? ' provisoria' : ''
+      }.</p>
+      <p style="color: #333333; font-size: 16px; line-height: 1.5; margin-bottom: 15px;">Ante cualquier emergencia, contacte a nuestra línea de asistencia:</p>
+      <p style="text-align: center; font-weight: bold; color: #E0251B; font-size: 20px; margin: 25px 0;">
+        0800 - 122 - 0498
+      </p>
+    </div>
+  </div>
+`;
+
 // Endpoint para enviar email
 router.post('/send-policy-email', validateEmail, (req, res) =>
   __awaiter(void 0, void 0, void 0, function* () {
@@ -107,6 +134,7 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
+
       const {
         polizaNumber,
         cuponNumber,
@@ -119,14 +147,16 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
         localidad,
         provincia,
         vehicle,
+        provisorio,
         vigenciaInicio,
         vigenciaFin,
         medioPago,
       } = req.body;
-      // Generar PDF
+
       const pdfData = {
         id: polizaNumber,
-        plan: 'AUTO - R FULL',
+        plan: 'R -ILIMITADO',
+        provisorio: provisorio || false,
         beneficiario: {
           nombre: clientName,
           dni: dni,
@@ -145,12 +175,13 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
           marca: vehicle.marca,
           modelo: vehicle.modelo,
           color: vehicle.color || '-',
-          patente: vehicle.patente,
+          patente: vehicle.patente.toUpperCase(),
         },
         medioPago: medioPago,
       };
+
       const pdfBuffer = yield (0, pdfGenerator_1.generatePolicyPDF)(pdfData);
-      // Configurar email con PDF adjunto
+
       const transporter = nodemailer_1.default.createTransport({
         service: 'gmail',
         auth: {
@@ -158,16 +189,12 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
           pass: process.env.EMAIL_PASS,
         },
       });
+
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: clientEmail,
         subject: `Póliza de Seguro #${polizaNumber}`,
-        html: `
-        <h1>¡Bienvenido a nuestro servicio de grúas!</h1>
-        <p>Estimado/a ${clientName},</p>
-        <p>Adjunto encontrará su póliza de seguro.</p>
-        <p>Ante cualquier emergencia, contacte a nuestra línea de asistencia.</p>
-      `,
+        html: getEmailTemplate(clientName, provisorio || false),
         attachments: [
           {
             filename: `poliza-${polizaNumber}.pdf`,
@@ -175,7 +202,9 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
           },
         ],
       };
+
       yield transporter.sendMail(mailOptions);
+
       res.status(200).json({
         message: 'Email enviado exitosamente con la póliza adjunta',
         success: true,
@@ -189,4 +218,77 @@ router.post('/send-policy-email', validateEmail, (req, res) =>
     }
   })
 );
+
+// Nuevo endpoint para solo generar PDF
+router.post('/generate-pdf', validateEmail, (req, res) =>
+  __awaiter(void 0, void 0, void 0, function* () {
+    try {
+      const errors = (0, express_validator_1.validationResult)(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const {
+        polizaNumber,
+        cuponNumber,
+        clientName,
+        clientEmail,
+        dni,
+        telefono,
+        direccion,
+        cp,
+        localidad,
+        provincia,
+        vehicle,
+        provisorio,
+        vigenciaInicio,
+        vigenciaFin,
+        medioPago,
+      } = req.body;
+
+      const pdfData = {
+        id: polizaNumber,
+        plan: 'R -ILIMITADO',
+        provisorio: provisorio || false,
+        beneficiario: {
+          nombre: clientName,
+          dni: dni,
+          celular: telefono,
+          email: clientEmail,
+          fechaEmision: vigenciaInicio,
+          condicion: vigenciaFin,
+        },
+        domicilio: {
+          direccion: direccion,
+          cp: cp,
+          localidad: localidad,
+          provincia: provincia,
+        },
+        vehiculo: {
+          marca: vehicle.marca,
+          modelo: vehicle.modelo,
+          color: vehicle.color || '-',
+          patente: vehicle.patente.toUpperCase(),
+        },
+        medioPago: medioPago,
+      };
+
+      const pdfBuffer = yield (0, pdfGenerator_1.generatePolicyPDF)(pdfData);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=poliza-${polizaNumber}.pdf`
+      );
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).json({
+        message: 'Error al generar el PDF',
+        error: error.message,
+      });
+    }
+  })
+);
+
 exports.default = router;
