@@ -277,6 +277,34 @@
         z-index: 2;
       }
 
+      .cut-line {
+        text-align: left;
+        margin: 30px 0 20px 0;
+        position: relative;
+        height: 20px;
+      }
+
+      .cut-line::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 30px;
+        right: 0;
+        height: 1px;
+        border-top: 2px dashed #999;
+        transform: translateY(-50%);
+      }
+
+      .scissors {
+        display: inline-block;
+        font-size: 16px;
+        color: #000;
+        background: white;
+        padding: 0 5px 0 0;
+        position: relative;
+        z-index: 1;
+      }
+
       .patente-cell {
         text-transform: uppercase;
       }
@@ -459,6 +487,9 @@
       <!-- Segunda Página - Solo credenciales -->
       <div class="page page-2">
         <div class="container">
+          <div class="cut-line">
+            <span class="scissors">✂</span>
+          </div>
           <h2 class="credential-title">TU CREDENCIAL</h2>
 
           <div class="credential-container">
