@@ -1,7 +1,7 @@
 // src/utils/pdfGenerator.ts
 import fs from 'fs';
 import path from 'path';
-import puppeteer from 'puppeteer-core';
+import puppeteer, { Browser } from 'puppeteer-core';
 
 interface PolicyData {
   id: string;
@@ -31,6 +31,7 @@ interface PolicyData {
 }
 
 export const generatePolicyPDF = async (data: PolicyData): Promise<Buffer> => {
+  let browser: Browser | undefined;
   try {
     // Leer el template HTML
     const templatePath = path.join(__dirname, '../templates/policy.html');
@@ -63,11 +64,12 @@ export const generatePolicyPDF = async (data: PolicyData): Promise<Buffer> => {
       template = template.replace(new RegExp(key, 'g'), value);
     });
 
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
+        '--disable-gpu',
       ],
       executablePath:
         process.env.CHROME_PATH ||
@@ -78,8 +80,12 @@ export const generatePolicyPDF = async (data: PolicyData): Promise<Buffer> => {
     });
 
     const page = await browser.newPage();
+    // Si el template trae una imagen que no carga, networkidle0 se cuelga hasta
+    // el timeout: con un tope de 30s el pedido falla rápido y el navegador se
+    // cierra en el finally.
     await page.setContent(template, {
       waitUntil: 'networkidle0',
+      timeout: 30000,
     });
 
     // Generar PDF
@@ -94,10 +100,16 @@ export const generatePolicyPDF = async (data: PolicyData): Promise<Buffer> => {
       printBackground: true,
     });
 
-    await browser.close();
     return Buffer.from(pdfBuffer);
   } catch (error) {
     console.error('Error generando PDF:', error);
     throw error;
+  } finally {
+    // Sin esto, cada PDF que falla deja un Chrome vivo: después de unos
+    // cuantos el contenedor se queda sin procesos y ya no genera ninguno
+    // ("fork: retry: Resource temporarily unavailable").
+    if (browser) {
+      await browser.close().catch(() => undefined);
+    }
   }
 };
