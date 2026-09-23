@@ -30,6 +30,13 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Rutas
 app.use('/api', emailRoutes);
 
+// Healthcheck de Railway: /api-docs responde 301 (swagger redirige a
+// /api-docs/) y el deploy quedaba marcado como fallido, dejando corriendo el
+// contenedor anterior.
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Puerto
 const PORT = process.env.PORT || 3000;
 
